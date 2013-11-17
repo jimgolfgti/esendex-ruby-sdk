@@ -57,11 +57,11 @@ module Esendex
         id: header['id'],
         account: header.at('reference').text,
         status: header.at('status').text,
-        status_at: parse_date(header.at('laststatusat').text),
+        status_at: parse_date(header.at('laststatusat')),
         submitted_by: header.at('username').text,
-        submitted_at: parse_date(header.at('submittedat').text),
-        sent_at: parse_date(header.at('sentat').try(:text)),
-        delivered_at: parse_date(header.at('deliveredat').try(:text)),
+        submitted_at: parse_date(header.at('submittedat')),
+        sent_at: parse_date(header.at('sentat')),
+        delivered_at: parse_date(header.at('deliveredat')),
         from: header.at('from phonenumber').text,
         to: format_contact(header.at('to')),
         type: header.at('type').text,
@@ -73,9 +73,9 @@ module Esendex
       })
     end
 
-    def parse_date(date_string)
-      return nil if date_string.nil? or date_string.empty?
-      DateTime.iso8601(date_string)
+    def parse_date(node)
+      return nil if node.nil?
+      DateTime.iso8601(node.text)
     end
 
     def format_contact(contact_node)

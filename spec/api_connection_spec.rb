@@ -1,79 +1,120 @@
 require 'spec_helper'
 
 describe ApiConnection do
-  let(:api_connection) { ApiConnection.new }
+  let(:endpoint) { stub("nestful_endpoint") }
 
   before(:each) do
-    @connection = Nestful::Connection.new Esendex::API_HOST
-    Nestful::Connection.stub(:new) { @connection }
-    @connection.stub(:get) {}
-    @connection.stub(:post) {}
     Esendex.configure do |config|
       config.username = random_string
       config.password = random_string
     end
+    stub_const("Nestful::Endpoint", endpoint)
+    endpoint
+      .stub(:new)
+      .with(anything, anything)
+      .and_return(endpoint)
   end
 
   describe "#initialise" do
 
     subject { ApiConnection.new }
 
-    it "should set the username" do
+    it "should set the api_host" do
+      endpoint
+        .should_receive(:new)
+        .with(Esendex.api_host, anything)
       subject
-      @connection.user.should eq(Esendex.username)
+    end
+    it "should set the username" do
+      endpoint
+        .should_receive(:new)
+        .with(anything, hash_including(user: Esendex.username))
+      subject
     end
     it "should set the password" do
+      endpoint
+        .should_receive(:new)
+        .with(anything, hash_including(password: Esendex.password))
       subject
-      @connection.password.should eq(Esendex.password)
     end
     it "should set the auth to basic" do
+      endpoint
+        .should_receive(:new)
+        .with(anything, hash_including(auth_type: :basic))
       subject
-      @connection.auth_type.should eq(:basic)
     end
-
+    it "should set the user-agent header" do
+      endpoint
+        .should_receive(:new)
+        .with(anything, hash_including(headers: hash_including('User-Agent' => Esendex.user_agent)))
+      subject
+    end
+    it "should set format" do
+      endpoint
+        .should_receive(:new)
+        .with(anything, hash_including(format: an_instance_of(ApplicationXmlFormat)))
+      subject
+    end
   end
-
 
   describe "#get" do
     let(:url) { random_string }
 
-    subject { api_connection.get url }
+    before(:each) do
+      endpoint.stub(:[]).and_return(endpoint)
+      endpoint.stub(:get)
+    end
+
+    subject { ApiConnection.new.get url }
     
-    it "should call get with headers" do
-      @connection.should_receive(:get).with(url, api_connection.default_headers)
+    it "should set url" do
+      endpoint.should_receive(:[]).with(url)
+      subject
+    end
+
+    it "should call get" do
+      endpoint.should_receive(:get)
       subject
     end
 
     context "when 403 raised" do
       before(:each) do
-        @connection.stub(:get) { raise Nestful::ForbiddenAccess.new(nil) }
+        endpoint.stub(:get) { raise Nestful::ForbiddenAccess.new(nil) }
       end
       it "raises an ForbiddenError" do
         expect { subject }.to raise_error(ForbiddenError)
       end
     end
-
   end
 
   describe "#post" do
     let(:url) { random_string }
     let(:body) { random_string }
 
-    subject { api_connection.post url, body }
+    before(:each) do
+      endpoint.stub(:[]).and_return(endpoint)
+      endpoint.stub(:post)
+    end
+
+    subject { ApiConnection.new.post url, body }
     
-    it "should call post with headers" do
-      @connection.should_receive(:post).with(url, body, api_connection.default_headers)
+    it "should set url" do
+      endpoint.should_receive(:[]).with(url)
+      subject
+    end
+
+    it "should call post" do
+      endpoint.should_receive(:post).with(nil, hash_including(body: body))
       subject
     end
 
     context "when 403 raised" do
       before(:each) do
-        @connection.stub(:post) { raise Nestful::ForbiddenAccess.new(nil) }
+        endpoint.stub(:post) { raise Nestful::ForbiddenAccess.new(nil) }
       end
       it "raises an ForbiddenError" do
         expect { subject }.to raise_error(ForbiddenError)
       end
     end
-
   end
 end
